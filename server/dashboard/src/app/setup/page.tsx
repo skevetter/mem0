@@ -405,7 +405,7 @@ export default function SetupPage() {
 
             {step === 1 && (
               <form onSubmit={handleStep2} className="space-y-4">
-                {!serverHasLlmKey && (
+                {!serverHasLlmKey && !isKeylessProvider(llmProvider) && (
                   <div className="rounded-md border border-memBorder-primary bg-surface-default-secondary p-3">
                     <p className="text-xs text-onSurface-default-tertiary">
                       No LLM provider API key is configured on the server. Paste
@@ -447,24 +447,27 @@ export default function SetupPage() {
                   </div>
                 </div>
 
-                <div className="space-y-1">
-                  <Label htmlFor="setup-llm-api-key">LLM API Key</Label>
-                  <Input
-                    id="setup-llm-api-key"
-                    type="password"
-                    value={llmApiKey}
-                    onChange={(e) => setLlmApiKey(e.target.value)}
-                    placeholder={
-                      serverHasLlmKey
-                        ? "Leave blank to keep existing key"
-                        : "sk-..."
-                    }
-                    className="font-mono text-sm"
-                  />
-                  <p className="text-xs text-onSurface-default-tertiary">
-                    Also used for the embedder when it shares the same provider.
-                  </p>
-                </div>
+                {!isKeylessProvider(llmProvider) && (
+                  <div className="space-y-1">
+                    <Label htmlFor="setup-llm-api-key">LLM API Key</Label>
+                    <Input
+                      id="setup-llm-api-key"
+                      type="password"
+                      value={llmApiKey}
+                      onChange={(e) => setLlmApiKey(e.target.value)}
+                      placeholder={
+                        serverHasLlmKey
+                          ? "Leave blank to keep existing key"
+                          : "sk-..."
+                      }
+                      className="font-mono text-sm"
+                    />
+                    <p className="text-xs text-onSurface-default-tertiary">
+                      Also used for the embedder when it shares the same
+                      provider.
+                    </p>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
@@ -520,7 +523,9 @@ export default function SetupPage() {
                     isLoading ||
                     !llmProvider ||
                     !embedderProvider ||
-                    (!serverHasLlmKey && !llmApiKey)
+                    (!serverHasLlmKey &&
+                      !llmApiKey &&
+                      !isKeylessProvider(llmProvider))
                   }
                   className="w-full"
                 >
