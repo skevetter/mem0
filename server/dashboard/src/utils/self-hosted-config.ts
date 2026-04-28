@@ -24,6 +24,11 @@ export const getEffectiveConfig = (data: unknown): EffectiveConfig | null => {
   );
 };
 
+const KEYLESS_PROVIDERS = new Set(["aws_bedrock"]);
+
+export const isKeylessProvider = (provider: string): boolean =>
+  KEYLESS_PROVIDERS.has(provider);
+
 export const buildProviderConfig = ({
   provider,
   model,
