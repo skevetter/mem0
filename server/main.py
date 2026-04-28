@@ -52,8 +52,8 @@ SENSITIVE_CONFIG_KEYS = {
 SKIPPED_REQUEST_LOG_PATHS = {"/api/health", "/docs", "/redoc", "/openapi.json"}
 SKIPPED_REQUEST_LOG_PREFIXES = ("/requests",)
 
-BUNDLED_LLM_PROVIDERS = ("openai", "anthropic", "gemini")
-BUNDLED_EMBEDDER_PROVIDERS = ("openai", "gemini")
+BUNDLED_LLM_PROVIDERS = ("openai", "anthropic", "gemini", "aws_bedrock")
+BUNDLED_EMBEDDER_PROVIDERS = ("openai", "gemini", "aws_bedrock")
 
 
 def _warn_if_unconfigured() -> None:
@@ -109,6 +109,9 @@ OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 HISTORY_DB_PATH = os.environ.get("HISTORY_DB_PATH", "/app/history/history.db")
 DEFAULT_LLM_MODEL = os.environ.get("MEM0_DEFAULT_LLM_MODEL", "gpt-4.1-nano-2025-04-14")
 DEFAULT_EMBEDDER_MODEL = os.environ.get("MEM0_DEFAULT_EMBEDDER_MODEL", "text-embedding-3-small")
+DEFAULT_LLM_PROVIDER = os.environ.get("MEM0_LLM_PROVIDER", "openai")
+DEFAULT_EMBEDDER_PROVIDER = os.environ.get("MEM0_EMBEDDER_PROVIDER", "openai")
+EMBEDDING_DIMS = int(os.environ.get("MEM0_EMBEDDING_DIMS", "1536"))
 
 DEFAULT_CONFIG = {
     "version": "v1.1",
@@ -121,13 +124,28 @@ DEFAULT_CONFIG = {
             "user": POSTGRES_USER,
             "password": POSTGRES_PASSWORD,
             "collection_name": POSTGRES_COLLECTION_NAME,
+            "embedding_model_dims": EMBEDDING_DIMS,
         },
     },
     "llm": {
-        "provider": "openai",
-        "config": {"api_key": OPENAI_API_KEY, "temperature": 0.2, "model": DEFAULT_LLM_MODEL},
+        "provider": DEFAULT_LLM_PROVIDER,
+        "config": {"model": DEFAULT_LLM_MODEL, "temperature": 0.2}
+            | ({"api_key": OPENAI_API_KEY} if DEFAULT_LLM_PROVIDER == "openai" else {}),
     },
-    "embedder": {"provider": "openai", "config": {"api_key": OPENAI_API_KEY, "model": DEFAULT_EMBEDDER_MODEL}},
+    "embedder": {
+        "provider": DEFAULT_EMBEDDER_PROVIDER,
+        "config": {"model": DEFAULT_EMBEDDER_MODEL}
+            | ({"api_key": OPENAI_API_KEY} if DEFAULT_EMBEDDER_PROVIDER == "openai" else {})
+            | ({"embedding_dims": EMBEDDING_DIMS} if DEFAULT_EMBEDDER_PROVIDER == "aws_bedrock" else {}),
+    },
+    "reranker": {
+        "provider": "llm_reranker",
+        "config": {
+            "provider": DEFAULT_LLM_PROVIDER,
+            "model": DEFAULT_LLM_MODEL,
+            "top_k": 5,
+        },
+    },
     "history_db_path": HISTORY_DB_PATH,
 }
 
@@ -379,7 +397,7 @@ def _serialize_memory(row: Any) -> Dict[str, Any]:
 
 
 def _list_all_memories(limit: int = ALL_MEMORIES_LIMIT) -> Dict[str, Any]:
-    results = get_memory_instance().vector_store.list(top_k=limit)
+    results = get_memory_instance().vector_store.list(limit=limit)
     rows = results[0] if results and isinstance(results, list) and isinstance(results[0], list) else results or []
     return {"results": [_serialize_memory(row) for row in rows]}
 
@@ -416,8 +434,15 @@ def get_memory(memory_id: str, _auth=Depends(verify_auth)):
 def search_memories(search_req: SearchRequest, _auth=Depends(verify_auth)):
     """Search for memories based on a query."""
     try:
-        params = {k: v for k, v in search_req.model_dump().items() if v is not None and k != "query"}
-        return get_memory_instance().search(query=search_req.query, **params)
+        entity_keys = {"user_id", "run_id", "agent_id"}
+        dump = {k: v for k, v in search_req.model_dump().items() if v is not None and k != "query"}
+        filters = dump.pop("filters", None) or {}
+        for key in entity_keys:
+            if key in dump:
+                filters[key] = dump.pop(key)
+        if filters:
+            dump["filters"] = filters
+        return get_memory_instance().search(query=search_req.query, **dump)
     except Exception:
         raise upstream_error()
 
