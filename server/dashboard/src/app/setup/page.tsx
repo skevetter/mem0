@@ -27,6 +27,7 @@ import {
 import {
   buildProviderConfig,
   getEffectiveConfig,
+  isKeylessProvider,
 } from "@/utils/self-hosted-config";
 import { isValidEmail } from "@/lib/validators";
 
@@ -134,7 +135,7 @@ export default function SetupPage() {
         setInitialLlmModel(llmMod);
         setInitialEmbedderProvider(embProv);
         setInitialEmbedderModel(embMod);
-        setServerHasLlmKey(!!config?.llm?.config?.api_key);
+        setServerHasLlmKey(!!config?.llm?.config?.api_key || isKeylessProvider(config?.llm?.provider ?? ""));
         setProviders(providersRes.data);
       } catch (err) {
         if (active) {

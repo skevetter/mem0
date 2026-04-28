@@ -1,3 +1,8 @@
+const KEYLESS_PROVIDERS = new Set(["aws_bedrock"]);
+
+export const isKeylessProvider = (provider: string): boolean =>
+  KEYLESS_PROVIDERS.has(provider);
+
 type ProviderConfig = {
   provider?: string;
   config?: {

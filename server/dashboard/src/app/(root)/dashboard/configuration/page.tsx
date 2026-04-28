@@ -20,6 +20,7 @@ import { MEMORY_ENDPOINTS } from "@/utils/api-endpoints";
 import {
   buildProviderConfig,
   getEffectiveConfig,
+  isKeylessProvider,
 } from "@/utils/self-hosted-config";
 import { useAuth } from "@/hooks/use-auth";
 import { useApiQuery } from "@/hooks/use-api-query";
@@ -157,10 +158,10 @@ export default function ConfigurationPage() {
             <Label className="text-xs">API Key</Label>
             <Input
               type="password"
-              placeholder="sk-..."
+              placeholder={isKeylessProvider(llmProvider) ? "Authenticated via IAM / environment" : "sk-..."}
               value={llmApiKey}
               onChange={(e) => setLlmApiKey(e.target.value)}
-              disabled={!isAdmin}
+              disabled={!isAdmin || isKeylessProvider(llmProvider)}
             />
           </div>
         </CardContent>
