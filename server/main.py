@@ -130,13 +130,13 @@ DEFAULT_CONFIG = {
     "llm": {
         "provider": DEFAULT_LLM_PROVIDER,
         "config": {"model": DEFAULT_LLM_MODEL, "temperature": 0.2}
-            | ({"api_key": OPENAI_API_KEY} if DEFAULT_LLM_PROVIDER == "openai" else {}),
+        | ({"api_key": OPENAI_API_KEY} if DEFAULT_LLM_PROVIDER == "openai" else {}),
     },
     "embedder": {
         "provider": DEFAULT_EMBEDDER_PROVIDER,
         "config": {"model": DEFAULT_EMBEDDER_MODEL}
-            | ({"api_key": OPENAI_API_KEY} if DEFAULT_EMBEDDER_PROVIDER == "openai" else {})
-            | ({"embedding_dims": EMBEDDING_DIMS} if DEFAULT_EMBEDDER_PROVIDER == "aws_bedrock" else {}),
+        | ({"api_key": OPENAI_API_KEY} if DEFAULT_EMBEDDER_PROVIDER == "openai" else {})
+        | ({"embedding_dims": EMBEDDING_DIMS} if DEFAULT_EMBEDDER_PROVIDER == "aws_bedrock" else {}),
     },
     "reranker": {
         "provider": "llm_reranker",
@@ -169,13 +169,6 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_exception_handler(UpstreamError, upstream_error_handler)
 DASHBOARD_URL = os.environ.get("DASHBOARD_URL", "http://localhost:3000")
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[DASHBOARD_URL],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 app.include_router(auth_router.router)
 app.include_router(api_keys_router.router)
@@ -318,6 +311,16 @@ async def log_requests(request: Request, call_next):
             )
 
 
+# CORSMiddleware must be added last (after exception handlers and the log_requests middleware) so it runs outermost.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[DASHBOARD_URL],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
 @app.get("/configure", summary="Get current Mem0 configuration")
 def get_config(_auth=Depends(verify_auth)):
     return _redact_config(get_current_config())
@@ -397,7 +400,7 @@ def _serialize_memory(row: Any) -> Dict[str, Any]:
 
 
 def _list_all_memories(limit: int = ALL_MEMORIES_LIMIT) -> Dict[str, Any]:
-    results = get_memory_instance().vector_store.list(limit=limit)
+    results = get_memory_instance().vector_store.list(top_k=limit)
     rows = results[0] if results and isinstance(results, list) and isinstance(results[0], list) else results or []
     return {"results": [_serialize_memory(row) for row in rows]}
 
