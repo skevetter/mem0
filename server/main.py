@@ -293,8 +293,8 @@ async def log_requests(request: Request, call_next):
             )
 
 
-# CORSMiddleware must be added AFTER all other middleware so it runs outermost,
-# ensuring CORS headers are present even on error responses from exception handlers.
+# CORSMiddleware must be added last (after exception handlers and the log_requests
+# middleware) so it runs outermost.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[DASHBOARD_URL],
@@ -383,7 +383,7 @@ def _serialize_memory(row: Any) -> Dict[str, Any]:
 
 
 def _list_all_memories(limit: int = ALL_MEMORIES_LIMIT) -> Dict[str, Any]:
-    results = get_memory_instance().vector_store.list(limit=limit)
+    results = get_memory_instance().vector_store.list(top_k=limit)
     rows = results[0] if results and isinstance(results, list) and isinstance(results[0], list) else results or []
     return {"results": [_serialize_memory(row) for row in rows]}
 
