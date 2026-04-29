@@ -23,6 +23,8 @@ _CONN_NAMES = {"APIConnectionError", "ConnectionError"}
 _BAD_REQUEST_NAMES = {"BadRequestError", "UnprocessableEntityError"}
 _DB_NAMES = {"OperationalError", "DBAPIError", "DisconnectionError"}
 _VECTOR_NAMES = {"UnexpectedResponse", "ResponseHandlingException"}
+_AWS_AUTH_NAMES = {"NoCredentialsError", "CredentialRetrievalError", "UnauthorizedSSOTokenError", "TokenRetrievalError"}
+_AWS_AUTH_ERROR_CODES = {"ExpiredToken", "ExpiredTokenException", "UnrecognizedClientException"}
 
 
 def _classify_one(exc: BaseException) -> tuple[str, str]:
@@ -48,6 +50,17 @@ def _classify_one(exc: BaseException) -> tuple[str, str]:
         return ("datastore_unavailable", "The memory database is unreachable.")
     if name in _VECTOR_NAMES or module.startswith("qdrant_client"):
         return ("vector_store_unavailable", "The vector store is unreachable or returned an error.")
+    if name in _AWS_AUTH_NAMES or module.startswith("botocore"):
+        error_code = getattr(exc, "code", "") or ""
+        if not error_code:
+            response = getattr(exc, "response", None) or {}
+            error_code = (response.get("Error") or {}).get("Code", "")
+        if name == "ClientError" and error_code not in _AWS_AUTH_ERROR_CODES:
+            return ("unknown", "Upstream provider error.")
+        return (
+            "aws_credentials_expired",
+            "AWS credentials expired or missing. Refresh your SSO token with: aws sso login",
+        )
     return ("unknown", "Upstream provider error.")
 
 
