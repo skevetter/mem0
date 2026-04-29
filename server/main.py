@@ -31,6 +31,7 @@ from routers import api_keys as api_keys_router
 from routers import entities as entities_router
 from routers import requests as requests_router
 from schemas import MessageResponse
+from mcp_server import setup_mcp
 from server_state import get_current_config, get_memory_instance, initialize_state, set_session_factory, update_config
 
 load_dotenv()
@@ -50,7 +51,7 @@ SENSITIVE_CONFIG_KEYS = {
     "token",
 }
 SKIPPED_REQUEST_LOG_PATHS = {"/api/health", "/docs", "/redoc", "/openapi.json"}
-SKIPPED_REQUEST_LOG_PREFIXES = ("/requests",)
+SKIPPED_REQUEST_LOG_PREFIXES = ("/requests", "/mcp")
 
 BUNDLED_LLM_PROVIDERS = ("openai", "anthropic", "gemini", "aws_bedrock")
 BUNDLED_EMBEDDER_PROVIDERS = ("openai", "gemini", "aws_bedrock")
@@ -174,6 +175,7 @@ app.include_router(auth_router.router)
 app.include_router(api_keys_router.router)
 app.include_router(entities_router.router)
 app.include_router(requests_router.router)
+setup_mcp(app)
 
 
 class Message(BaseModel):
