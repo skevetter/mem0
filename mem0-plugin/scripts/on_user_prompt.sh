@@ -22,21 +22,19 @@ if [ ${#PROMPT} -lt 20 ]; then
   exit 0
 fi
 
+MEM0_BASE_URL="${MEM0_BASE_URL:-http://localhost:8888}"
 API_KEY="${MEM0_API_KEY:-}"
-if [ -z "$API_KEY" ]; then
-  exit 0
-fi
-
 USER_ID="${MEM0_USER_ID:-${USER:-default}}"
+AGENT_ID="${MEM0_AGENT_ID:-claude-code}"
 
 # Build request body safely via jq to avoid injection
-BODY=$(jq -n --arg query "$PROMPT" --arg user_id "$USER_ID" \
-  '{query: $query, filters: {user_id: $user_id}, top_k: 5}')
+BODY=$(jq -n --arg query "$PROMPT" --arg user_id "$USER_ID" --arg agent_id "$AGENT_ID" \
+  '{query: $query, filters: {user_id: $user_id, agent_id: $agent_id}, top_k: 5}')
 
 # Search mem0 for memories relevant to this prompt
 RESPONSE=$(curl -s --max-time 3 \
-  -X POST "https://api.mem0.ai/v2/memories/search/" \
-  -H "Authorization: Token $API_KEY" \
+  -X POST "${MEM0_BASE_URL}/search" \
+  ${API_KEY:+-H "Authorization: Token $API_KEY"} \
   -H "Content-Type: application/json" \
   -d "$BODY" \
   2>/dev/null || echo "")

@@ -27,7 +27,7 @@ _handler = logging.StreamHandler(sys.stderr)
 _handler.setFormatter(logging.Formatter("[mem0-capture] %(message)s"))
 log.addHandler(_handler)
 
-API_URL = "https://api.mem0.ai"
+API_URL = os.environ.get("MEM0_BASE_URL", "http://localhost:8888")
 MAX_TAIL_LINES = 500
 MAX_USER_MESSAGES = 30
 MAX_BASH_COMMANDS = 20
@@ -149,13 +149,14 @@ def build_content(state: dict, source: str) -> str:
     return "\n".join(parts)
 
 
-def store_memory(api_key: str, content: str, user_id: str, source: str) -> bool:
+def store_memory(api_key: str, content: str, user_id: str, agent_id: str, source: str) -> bool:
     """Store session state as a memory via the Mem0 REST API."""
     body = {
         "messages": [
             {"role": "user", "content": content}
         ],
         "user_id": user_id,
+        "agent_id": agent_id,
         "metadata": {
             "type": "session_state",
             "source": source,
@@ -163,13 +164,13 @@ def store_memory(api_key: str, content: str, user_id: str, source: str) -> bool:
     }
 
     data = json.dumps(body).encode("utf-8")
+    headers = {"Content-Type": "application/json"}
+    if api_key:
+        headers["Authorization"] = f"Token {api_key}"
     req = urllib.request.Request(
-        f"{API_URL}/v1/memories/",
+        f"{API_URL}/memories",
         data=data,
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Token {api_key}",
-        },
+        headers=headers,
         method="POST",
     )
 
@@ -192,9 +193,6 @@ def main():
             source = arg.split("=", 1)[1]
 
     api_key = os.environ.get("MEM0_API_KEY", "")
-    if not api_key:
-        log.debug("MEM0_API_KEY not set, skipping capture")
-        return
 
     try:
         hook_input = json.loads(sys.stdin.read())
@@ -208,6 +206,7 @@ def main():
         return
 
     user_id = os.environ.get("MEM0_USER_ID", os.environ.get("USER", "default"))
+    agent_id = os.environ.get("MEM0_AGENT_ID", "claude-code")
 
     lines = tail_lines(transcript_path, MAX_TAIL_LINES)
     if not lines:
@@ -228,7 +227,7 @@ def main():
         len(state["bash_commands"]),
     )
 
-    store_memory(api_key, content, user_id, source)
+    store_memory(api_key, content, user_id, agent_id, source)
 
 
 if __name__ == "__main__":

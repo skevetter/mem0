@@ -11,14 +11,18 @@
 
 set -euo pipefail
 
-cat <<'EOF'
+AGENT_ID="${MEM0_AGENT_ID:-claude-code}"
+
+cat <<EOF
 ## CRITICAL: Pre-Compaction Session Summary
 
-Context compaction is about to happen. You are about to lose most of your conversation history. You MUST store a comprehensive session summary NOW using the mem0 `add_memory` tool.
+Context compaction is about to happen. You are about to lose most of your conversation history. You MUST store a comprehensive session summary NOW using the mem0 \`add_memory\` tool.
+
+IMPORTANT: Always include \`agent_id: "${AGENT_ID}"\` in every \`add_memory\` call so memories are attributed correctly.
 
 ### Step 1: Store session summary
 
-Call `add_memory` with a thorough summary covering ALL of the following:
+Call \`add_memory\` with a thorough summary covering ALL of the following:
 
 ```
 ## Session Summary (Pre-Compaction)
@@ -44,14 +48,14 @@ Call `add_memory` with a thorough summary covering ALL of the following:
 the post-compaction agent continue without asking redundant questions]
 ```
 
-Include metadata: `{"type": "session_state", "source": "pre-compaction"}`
+Include metadata: \`{"type": "session_state", "source": "pre-compaction"}\`
 
 ### Step 2: Store any unstored learnings
 
 If there are learnings from this session that you haven't stored yet, store them as separate memories:
-- Failed approaches -> metadata `{"type": "anti_pattern"}`
-- Successful strategies -> metadata `{"type": "task_learning"}`
-- Architecture decisions -> metadata `{"type": "decision"}`
+- Failed approaches -> metadata \`{"type": "anti_pattern"}\`
+- Successful strategies -> metadata \`{"type": "task_learning"}\`
+- Architecture decisions -> metadata \`{"type": "decision"}\`
 
 ### Step 3: Acknowledge
 

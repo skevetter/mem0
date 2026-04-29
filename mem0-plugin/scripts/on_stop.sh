@@ -21,14 +21,18 @@ if [ "$STOP_HOOK_ACTIVE" = "true" ]; then
   exit 0
 fi
 
-cat <<'EOF'
-Before finishing, check if there are important learnings from this interaction that should be persisted using the mem0 `add_memory` tool:
+AGENT_ID="${MEM0_AGENT_ID:-claude-code}"
 
-1. Were any significant decisions made? -> Store with metadata `{"type": "decision"}`
-2. Were any new patterns or strategies discovered? -> Store with metadata `{"type": "task_learning"}`
-3. Did any approach fail? -> Store with metadata `{"type": "anti_pattern"}`
-4. Did you learn anything about the user's preferences? -> Store with metadata `{"type": "user_preference"}`
-5. Were there environment/setup discoveries? -> Store with metadata `{"type": "environmental"}`
+cat <<EOF
+Before finishing, check if there are important learnings from this interaction that should be persisted using the mem0 \`add_memory\` tool:
+
+1. Were any significant decisions made? -> Store with metadata \`{"type": "decision"}\`
+2. Were any new patterns or strategies discovered? -> Store with metadata \`{"type": "task_learning"}\`
+3. Did any approach fail? -> Store with metadata \`{"type": "anti_pattern"}\`
+4. Did you learn anything about the user's preferences? -> Store with metadata \`{"type": "user_preference"}\`
+5. Were there environment/setup discoveries? -> Store with metadata \`{"type": "environmental"}\`
+
+IMPORTANT: Always include \`agent_id: "${AGENT_ID}"\` in every \`add_memory\` call so memories are attributed correctly.
 
 Memories can be as detailed as needed — include full context, reasoning, code snippets, file paths, and examples. Longer, searchable memories are more valuable than vague one-liners.
 

@@ -11,6 +11,7 @@ set -euo pipefail
 
 INPUT=$(cat)
 TASK_SUBJECT=$(echo "$INPUT" | jq -r '.task_subject // "unknown task"' 2>/dev/null || echo "unknown task")
+AGENT_ID="${MEM0_AGENT_ID:-claude-code}"
 
 cat <<EOF
 Task completed: "$TASK_SUBJECT"
@@ -21,6 +22,8 @@ Extract key learnings from this completed task and store them using the mem0 \`a
 2. Were there failed approaches before finding the solution? -> Store with metadata \`{"type": "anti_pattern"}\`
 3. Were there architectural decisions? -> Store with metadata \`{"type": "decision"}\`
 4. Any new conventions or patterns established? -> Store with metadata \`{"type": "convention"}\`
+
+IMPORTANT: Always include \`agent_id: "${AGENT_ID}"\` in every \`add_memory\` call so memories are attributed correctly.
 
 Memories can be as detailed as needed — include full context, reasoning, code snippets, and examples.
 Only store genuinely useful learnings — skip if the task was trivial.
